@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>InterleaveThinker</title>
+    <meta
+      name="description"
+      content="InterleaveThinker: Reinforcing Agentic Interleaved Generation."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="InterleaveThinker: Reinforcing Agentic Interleaved Generation" />
+    <meta property="og:description" content="A multi-agent pipeline that endows existing image generators with interleaved generation capabilities." />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="InterleaveThinker" />
+    <meta name="twitter:description" content="Reinforcing Agentic Interleaved Generation." />
+
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* ===== Override vars for InterleaveThinker palette ===== */
+      :root {
+        --purple: #7C3AED;
+        --purple-soft: #F3EFFF;
+        --purple-accent: #5B21B6;
+        --purple-mid: #A78BFA;
+        --shadow: 0 16px 40px rgba(124, 58, 237, 0.10);
+      }
+
+      /* ===== Pipeline Diagram ===== */
+      .pipeline-diagram {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin: 24px 0 0;
+        overflow-x: auto;
+        padding-bottom: 6px;
+      }
+      .pipeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 130px;
+        flex: 1;
+      }
+      .pipeline-node {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        text-align: center;
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .pipeline-node.p-base { border-color: #d1d5db; color: #6b7280; }
+      .pipeline-node.p-s1 { border-color: #ddd6fe; color: var(--purple); background: var(--purple-soft); }
+      .pipeline-node.p-s2 { border-color: #a5f3fc; color: #0891b2; background: #ecfeff; }
+      .pipeline-node.p-out { border-color: #fde68a; color: #b45309; background: #fffbeb; }
+      .pipeline-node.p-teacher {
+        border-color: #bbf7d0; color: #047857; background: #ecfdf5;
+        font-size: 12px; padding: 6px 10px; margin-bottom: 3px;
+      }
+      .pipeline-label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+      .pipeline-teacher-col { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+      .pipeline-arrow { display: flex; align-items: center; padding: 0 6px; color: #d1d5db; font-size: 1.3rem; flex-shrink: 0; }
+
+      /* ===== Results Cards ===== */
+      .result-card.wide { grid-column: 1 / -1; }
+      .result-card { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--soft); }
+      .result-card h3 { margin: 0 0 12px; font-size: 16px; }
+      .result-card p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      /* ===== Contributor Cards ===== */
+      .contrib-grid article { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--soft); }
+      .contrib-grid h3 { margin: 0 0 10px; font-size: 15px; }
+      .contrib-grid p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      /* ===== Key Stats Banner ===== */
+      .key-stats {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin: 24px 0;
+      }
+      .key-stat {
+        flex: 1;
+        min-width: 140px;
+        background: var(--purple-soft);
+        border: 1px solid #ddd6fe;
+        border-radius: 12px;
+        padding: 18px 20px;
+        text-align: center;
+      }
+      .key-stat .ks-val {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--purple);
+        line-height: 1;
+      }
+      .key-stat .ks-label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+        font-weight: 600;
+      }
+
+      /* ===== Citation block ===== */
+      .citation-block {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 24px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--muted);
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        line-height: 1.8;
+      }
+
+      .asset-frame img {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--soft);
+        box-shadow: var(--shadow);
+      }
+      /* ===== Formula Block ===== */
+      .formula-block {
+        margin-top: 32px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 24px;
+        background: var(--soft);
+      }
+      .formula-block h3 { margin: 0 0 20px; }
+      .formula-item {
+        margin-bottom: 28px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+      .formula-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+      .formula-label { font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .formula {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 18px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: var(--ink);
+        overflow-x: auto;
+        margin-bottom: 10px;
+        line-height: 1.8;
+      }
+      .formula-caption { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+      /* ===== Keywords ===== */
+      .keywords {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .kw-badge {
+        background: var(--purple-soft);
+        color: var(--purple);
+        border: 1px solid #ddd6fe;
+        border-radius: 20px;
+        padding: 4px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 680px) {
+        .pipeline-diagram { flex-direction: column; }
+        .pipeline-arrow { transform: rotate(90deg); padding: 4px 0; justify-content: center; }
+        .results-grid { grid-template-columns: 1fr !important; }
+        .key-stats { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top">
+        <img class="brand-icon" src="../assets/logo.png" alt="" />
+        InterleaveThinker
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#abstract">Abstract</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#bibtex">BibTeX</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <!-- ===== HERO ===== -->
+      <section class="hero paper-width">
+        <div class="keywords">
+          <span class="kw-badge">Interleaved Generation</span>
+          <span class="kw-badge">Agentic Reasoning</span>
+        </div>
+        <h1><span class="title-rest">InterleaveThinker: Reinforcing Agentic Interleaved Generation</span></h1>
+        <p class="subtitle">
+          We introduce InterleaveThinker, a multi-agent pipeline that endows existing image generators with interleaved generation capabilities through planning, critique, and step-wise instruction refinement.
+        </p>
+
+        <div class="authors" aria-label="Authors">
+          <span>Dian Zheng<sup>1,2*</sup></span>
+          <span>Harry Lee</span>
+          <span>Manyuan Zhang<sup>2&#8224;</sup></span>
+          <span>Kaituo Feng<sup>1</sup></span>
+          <span>Zoey Guo<sup>3</sup></span>
+          <span>Ray Zhang<sup>1</sup></span>
+          <span>Hongsheng Li<sup>1&#9993;</sup></span>
+        </div>
+
+        <div class="affiliations">
+          <p><sup>1</sup>CUHK MMLab &middot; <sup>2</sup>Meituan &middot; <sup>3</sup>CUHK IMIXR</p>
+          <p>*Work done while Dian Zheng was an intern at Meituan &middot; &#8224;Project Leader &middot; &#9993;Corresponding Author</p>
+        </div>
+
+        <div class="actions">
+          <a class="button primary" href="#">Paper</a>
+          <a class="button" href="https://github.com/zhengdian1/InterleaveThinker">Code</a>
+          <a class="button" href="https://huggingface.co/InterleaveThinker/InterleaveThinker-Planner-8B">Planner-8B</a>
+          <a class="button" href="https://huggingface.co/InterleaveThinker/InterleaveThinker-Critic-8B">Critic-8B</a>
+          <!-- <a class="button" href="https://huggingface.co/InterleaveThinker/Train-Data">Train-Data</a>
+          <a class="button" href="https://huggingface.co/InterleaveThinker/Train-Data">Interleaved Data</a> -->
+        </div>
+      </section>
+
+      <!-- ===== TEASER ===== -->
+      <figure class="teaser paper-width asset-frame">
+        <img src="assets/teaser.jpg" alt="InterleaveThinker teaser figure" />
+      </figure>
+
+      <!-- ===== KEY STATS ===== -->
+      <section class="paper-width">
+        <div class="key-stats">
+          <div class="key-stat">
+            <div class="ks-val">66.3</div>
+            <div class="ks-label">UEval (base: 18.2)</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">8.6</div>
+            <div class="ks-label">CoMM (base: 0/10)</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">0.73</div>
+            <div class="ks-label">WISE (base: 0.47/1)</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">28.9</div>
+            <div class="ks-label">RISE (base: 13.3)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ABSTRACT ===== -->
+      <section class="section paper-width" id="abstract">
+        <h2>Abstract</h2>
+        <p>
+          Interleaved generation asks a system to produce coherent text-image sequences across multiple dependent steps, where each visual result must respect both the current instruction and the accumulated history.
+        </p>
+        <p>
+          We introduce <strong>InterleaveThinker</strong>, a multi-agent pipeline designed to endow existing image generators with interleaved generation capabilities. A planner agent organizes the image-text input sequence and decomposes it into executable generation steps. A critic agent evaluates generator outputs, identifies deviations, and refines instructions for subsequent generation.
+        </p>
+        <p>
+          We build dedicated training datasets for planner supervised fine-tuning, critic supervised fine-tuning, and critic reinforcement learning. With GRPO and proposed accuracy and step-wise rewards, InterleaveThinker learns to perform step-aware correction and transfers across multiple image generation backends <strong>We further transform our data into real interleaved data with two mode: 1) simple version without reflection. 2) hard version with reflection. Enjoy it!</strong>.
+        </p>
+      </section>
+
+      <!-- ===== METHOD ===== -->
+      <section class="section paper-width" id="method">
+        <h2>Method</h2>
+        <p>
+          InterleaveThinker decouples high-level interleaved reasoning from low-level image synthesis by multi-agents workflow. The agents plan and correct the sequence, while the image generator performs each generation or editing action.
+        </p>
+
+        <figure class="asset-frame paper-figure" style="width: 860px; max-width: 100%; margin-left: auto; margin-right: auto;">
+          <img src="assets/pipeline.png" alt="InterleaveThinker method overview" />
+        </figure>
+      </section>
+
+      <!-- ===== GALLERY ===== -->
+      <section class="section paper-width" id="gallery">
+        <h2>Qualitative Results</h2>
+        <p class="note">
+          Representative examples for visual narratives, instructional guidance, embodied manipulation, and long-horizon sub-task annotation.
+        </p>
+
+        <figure class="asset-frame" style="width: 900px; max-width: 100%; margin-left: auto; margin-right: auto;">
+          <img src="assets/per1.png" alt="Qualitative results comparison" />
+        </figure>
+
+        <figure class="asset-frame" style="width: 900px; max-width: 100%; margin-left: auto; margin-right: auto;">
+          <img src="assets/per2.png" alt="Qualitative results comparison" />
+        </figure>
+
+        <!-- <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 16px;">
+          <figure class="asset-frame">
+            <img src="assets/more1.png" alt="Visual narrative qualitative example" />
+          </figure>
+
+          <figure class="asset-frame">
+            <img src="assets/more2.png" alt="Instructional guidance qualitative example" />
+          </figure>
+        </div> -->
+      </section>
+
+      <!-- ===== BIBTEX ===== -->
+      <section class="section paper-width" id="bibtex">
+        <h2>BibTeX</h2>
+        <div class="citation-block">@article{zheng2026interleavethinker,
+  title   = {InterleaveThinker: Reinforcing Agentic Interleaved Generation},
+  author  = {Zheng, Dian and Lee, Harry and Zhang, Manyuan and Feng, Kaituo and Guo, Zoey and Zhang, Ray and Li, Hongsheng},
+  journal = {},
+  year    = {2026}
+}</div>
+        <div style="margin-top: 16px;">
+          <button class="button" onclick="copyCitation(this)" style="cursor:pointer;">Copy Citation</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer paper-width">
+      <p>InterleaveThinker: Reinforcing Agentic Interleaved Generation. &copy; 2026.</p>
+    </footer>
+
+    <script>
+      function copyCitation(btn) {
+        const text = `@article{zheng2026interleavethinker,
+  title   = {InterleaveThinker: Reinforcing Agentic Interleaved Generation},
+  author  = {Zheng, Dian and Lee, Harry and Zhang, Manyuan and Feng, Kaituo and Guo, Zoey and Zhang, Ray and Li, Hongsheng},
+  journal = {},
+  year    = {2026}
+}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          btn.style.color = 'var(--green)';
+          setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+        });
+      }
+    </script>
+  </body>
+</html>
